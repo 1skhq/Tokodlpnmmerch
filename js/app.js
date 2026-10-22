@@ -1,5 +1,5 @@
 import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isPOOpen, sizeStock } from "./utils.js";
-import { STATUS, KATEGORI_AWAL } from "./config.js";
+import { STATUS, KATEGORI_AWAL, LIMITS } from "./config.js";
 import * as api from "./data.js";
 import { getCart, addItem, setQty, removeItem, clearCart, cartCount, cartTotal } from "./cart.js";
 import * as B from "./buyer.js";
@@ -11,14 +11,15 @@ const DEFAULT_FORM = { pay: "Transfer Bank", rekIdx: 0, nama: "", phone: "", kot
 
 /* ---------- STATE ---------- */
 const S = {
-  products: [], store: {}, loading: true, error: false,
+  products: [], store: {}, banner: [], loading: true, error: false,
   search: "", cat: "Semua",
   pick: { pid: "", color: "", size: "", qty: 1 },
   form: { ...DEFAULT_FORM },
+  direct: null,                 // barang untuk "Beli Langsung" (tidak masuk keranjang)
   track: null, trackCode: "",
   last: null,
   user: undefined, orders: [], orderSel: null, tab: "dashboard",
-  draft: null, filter: { q: "", status: "", po: false }, imgTmp: {},
+  draft: null, filter: { q: "", status: "", po: false, range: "" }, imgTmp: {},
 };
 
 /* ---------- ROUTING ---------- */
@@ -63,12 +64,23 @@ async function loadProducts() {
 async function loadStore() {
   try { S.store = await api.fetchStore(); }
   catch (e) { handleErr(e); }
+  try { S.banner = await api.fetchBanner(); }
+  catch (e) { console.error(e); }
+}
+
+/* Rentang tanggal untuk filter pesanan di server */
+function rangeSince(r) {
+  const now = new Date();
+  if (r === "bulan") return new Date(now.getFullYear(), now.getMonth(), 1);
+  if (r === "30") return new Date(Date.now() - 30 * 864e5);
+  if (r === "365") return new Date(Date.now() - 365 * 864e5);
+  return null;
 }
 
 let unwatch = null;
 function startWatch() {
   if (unwatch) return;
-  unwatch = api.watchOrders(list => {
+  unwatch = api.watchOrders({ since: rangeSince(S.filter.range) }, list => {
     S.orders = list;
     if (route().name === "admin" && ["dashboard", "orders"].includes(S.tab)) render();
   }, handleErr);
@@ -77,6 +89,23 @@ function stopWatch() {
   unwatch?.();
   unwatch = null;
   S.orders = [];
+}
+function restartWatch() {
+  stopWatch();
+  if (S.user) startWatch();
+}
+
+/* Hapus pesanan > 1 tahun. Dijalankan sekali per sesi admin. */
+let purged = false;
+async function runPurge() {
+  if (purged) return;
+  purged = true;
+  try {
+    const n = await api.purgeOldOrders(LIMITS.retainDays);
+    if (n) toast(`${n} pesanan lebih dari 1 tahun dihapus otomatis`, "info");
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 /* ---------- HELPER PRODUK ---------- */
@@ -103,8 +132,8 @@ function uniqueSizes(list) {
 
 function blankProduct() {
   return {
-    id: null, name: "", price: 0, category: S.store.kategori?.[0] || KATEGORI_AWAL[0], description: "", image: "",
-    isPO: false, poEstimate: "", poDeadline: "", poQuota: 0, poSold: 0, poNote: "", poClosed: false,
+    id: null, name: "", price: 0, category: S.store.kategori?.[0] || KATEGORI_AWAL[0], description: "",
+    images: [], isPO: false, poEstimate: "", poDeadline: "", poQuota: 0, poSold: 0, poNote: "", poClosed: false,
     colors: [{ name: "", hex: "#111111", image: "", sizes: [{ size: "S", stock: 0 }] }],
   };
 }
@@ -139,7 +168,7 @@ function buyerView(r) {
       return B.viewProduct(p, S);
     }
     case "keranjang": return B.viewCart(S);
-    case "checkout": return B.viewCheckout(S);
+    case "checkout": return B.viewCheckout(S, S.direct ? [S.direct] : getCart());
     case "sukses": return S.last ? B.viewSuccess(S.last, S.store) : B.viewHome(S);
     case "cek": return B.viewTrack(S);
     default: return B.viewHome(S);
@@ -171,27 +200,44 @@ function refreshOrders() {
   if (l) l.innerHTML = A.orderListHTML(S);
 }
 
-/* ---------- KERANJANG & PESANAN ---------- */
-function addToCart() {
+/* ---------- KERANJANG & BELI LANGSUNG ---------- */
+function validatePick() {
   const p = curProduct();
   const { color, size, qty } = S.pick;
-  if (!p) return;
-  if (!size) return toast("Pilih ukuran dulu", "warn");
-  if (p.isPO && !isPOOpen(p)) return toast("PO untuk produk ini sudah ditutup", "warn");
-
+  if (!p) return null;
+  if (!size) { toast("Pilih ukuran dulu", "warn"); return null; }
+  if (p.isPO && !isPOOpen(p)) { toast("PO untuk produk ini sudah ditutup", "warn"); return null; }
   const stock = p.isPO ? 99 : sizeStock(p, color, size);
-  if (!p.isPO && stock <= 0) return toast("Ukuran ini sedang habis", "warn");
+  if (!p.isPO && stock <= 0) { toast("Ukuran ini sedang habis", "warn"); return null; }
+  return { p, color, size, qty, stock };
+}
 
+function addToCart() {
+  const v = validatePick();
+  if (!v) return;
+  const { p, color, size, qty, stock } = v;
   const key = [p.id, color, size].join("|");
   const inCart = getCart().find(i => i.key === key)?.qty || 0;
   if (!p.isPO && inCart + qty > stock) {
     return toast(`Sisa stok untuk pilihan ini ${stock - inCart}`, "warn");
   }
-
   addItem({ product: p, color, size, qty, stock });
   S.pick.qty = 1;
   toast("Masuk keranjang ✓", "ok");
   render();
+}
+
+function buyNow() {
+  const v = validatePick();
+  if (!v) return;
+  const { p, color, size, qty, stock } = v;
+  if (!p.isPO && qty > stock) return toast(`Stok tersisa ${stock}`, "warn");
+  S.direct = {
+    key: [p.id, color, size].join("|"), id: p.id, name: p.name, price: p.price,
+    color, size, qty, isPO: !!p.isPO, poEstimate: p.poEstimate || "",
+  };
+  S.pick.qty = 1;
+  location.hash = "#/checkout";
 }
 
 async function trackOrder() {
@@ -213,7 +259,8 @@ async function trackOrder() {
 
 async function submitOrder() {
   const f = S.form;
-  const items = getCart();
+  const wasDirect = !!S.direct;
+  const items = wasDirect ? [S.direct] : getCart();
   if (!items.length) { location.hash = "#/keranjang"; return; }
 
   const nama = (f.nama || "").trim();
@@ -237,7 +284,6 @@ async function submitOrder() {
     }
   }
 
-  // Simpan rekening yang dipilih pembeli (jika lebih dari satu)
   const list = A.rekeningList(S.store);
   const rek = list[Math.min(+f.rekIdx || 0, list.length - 1)];
   const payment = f.pay === "QRIS" ? "QRIS" : rek ? `Transfer ${rek.name} ${rek.number}` : "Transfer Bank";
@@ -270,7 +316,8 @@ async function submitOrder() {
   try {
     await api.createOrder(code, order);
     S.last = { ...order, createdAt: null, updatedAt: null };
-    clearCart();
+    if (!wasDirect) clearCart();
+    S.direct = null;
     location.hash = "#/sukses";
   } catch (e) {
     handleErr(e);
@@ -291,21 +338,40 @@ async function doLogin() {
   }
 }
 
+/* Foto: bisa memilih banyak file sekaligus */
 async function handleImage(t) {
-  const f = t.files?.[0];
-  if (!f) return;
+  const files = [...(t.files || [])];
+  if (!files.length) return;
+  const k = t.dataset.img;
   try {
-    const url = await compressImage(f);
-    const k = t.dataset.img;
-    if (k === "main") {
+    if (k === "gallery") {
       S.draft = A.readProductForm(S.draft);
-      S.draft.image = url;
-      render();
-    } else if (k === "color") {
+      const room = LIMITS.gallery - S.draft.images.length;
+      if (room <= 0) return toast(`Maksimal ${LIMITS.gallery} foto per produk`, "warn");
+      for (const f of files.slice(0, room)) S.draft.images.push(await compressImage(f));
+      if (files.length > room) toast(`Hanya ${room} foto ditambahkan (maks ${LIMITS.gallery})`, "warn");
+      return render();
+    }
+
+    if (k === "banner") {
+      const room = LIMITS.banner - S.banner.length;
+      if (room <= 0) return toast(`Maksimal ${LIMITS.banner} foto banner`, "warn");
+      const next = [...S.banner];
+      for (const f of files.slice(0, room)) next.push(await compressImage(f));
+      if (!checkDocSize({ images: next })) return;
+      await api.saveBanner(next);
+      S.banner = next;
+      toast("Banner ditambahkan", "ok");
+      return render();
+    }
+
+    const url = await compressImage(files[0]);
+    if (k === "color") {
       S.draft = A.readProductForm(S.draft);
       S.draft.colors[+t.dataset.i].image = url;
       render();
     } else {
+      // logo / qris: pratinjau saja, disimpan lewat tombol Simpan pengaturan
       S.imgTmp[k] = url;
       const prev = $("#prev-" + k);
       if (prev) { prev.src = url; prev.hidden = false; }
@@ -335,7 +401,7 @@ async function saveProduct() {
     price: d.price,
     category: d.category,
     description: d.description,
-    image: d.image || "",
+    images: d.images.slice(0, LIMITS.gallery),
     colors,
     isPO: d.isPO,
     poEstimate: d.isPO ? d.poEstimate : "",
@@ -364,7 +430,7 @@ async function seedProducts() {
   const col = (name, hex, stock, sizes = ["S", "M", "L", "XL"]) =>
     ({ name, hex, image: "", sizes: sizes.map(size => ({ size, stock })) });
   const base = {
-    description: "Contoh produk untuk percobaan.", image: "", isPO: false,
+    description: "Contoh produk untuk percobaan.", images: [], isPO: false,
     poEstimate: "", poDeadline: "", poQuota: 0, poSold: 0, poNote: "", poClosed: false,
   };
   const po = {
@@ -389,7 +455,6 @@ async function seedProducts() {
   }
 }
 
-/* Data pelanggan: admin memperbaiki kesalahan input pembeli */
 async function saveCustomer(id) {
   const v = k => $("#ec-" + k).value.trim();
   const phone = v("phone").replace(/\D/g, "");
@@ -423,7 +488,6 @@ async function saveOrder(id) {
   }
 }
 
-/* Membaca daftar rekening dari form admin */
 function readRekening() {
   const n = document.querySelectorAll("#rek-list .color-block").length;
   const out = [];
@@ -435,7 +499,6 @@ function readRekening() {
   return out;
 }
 
-/* Membaca daftar kategori dari form admin */
 function readKategori() {
   const n = document.querySelectorAll("#kat-list input").length;
   const out = [];
@@ -454,7 +517,7 @@ async function saveSettings() {
     storeName: v("s-name"),
     adminWa: v("s-wa"),
     rekening,
-    bank: rekening[0] || { name: "", number: "", holder: "" }, // kompatibilitas data lama
+    bank: rekening[0] || { name: "", number: "", holder: "" },
     kategori,
     logo: S.imgTmp.logo ?? S.store.logo ?? "",
     qris: S.imgTmp.qris ?? S.store.qris ?? "",
@@ -493,6 +556,7 @@ const actions = {
     render();
   },
   add: () => addToCart(),
+  "buy-now": () => buyNow(),
 
   "cart-qty": el => {
     const item = getCart().find(i => i.key === el.dataset.key);
@@ -522,6 +586,11 @@ const actions = {
     render();
   },
   "cancel-product": () => { S.draft = null; render(); },
+  "del-photo": el => {
+    S.draft = A.readProductForm(S.draft);
+    S.draft.images.splice(+el.dataset.i, 1);
+    render();
+  },
   "add-color": () => {
     S.draft = A.readProductForm(S.draft);
     S.draft.colors.push({ name: "", hex: "#111111", image: "", sizes: [] });
@@ -576,7 +645,17 @@ const actions = {
   "save-customer": el => saveCustomer(el.dataset.id),
   "save-settings": () => saveSettings(),
 
-  /* rekening */
+  "del-banner": async el => {
+    if (!confirm("Hapus foto banner ini?")) return;
+    const next = S.banner.filter((_, n) => n !== +el.dataset.i);
+    try {
+      await api.saveBanner(next);
+      S.banner = next;
+      toast("Banner dihapus", "ok");
+      render();
+    } catch (e) { handleErr(e); }
+  },
+
   "add-rek": () => {
     const cur = readRekening();
     S.store = { ...S.store, rekening: [...cur, { name: "", number: "", holder: "" }] };
@@ -589,7 +668,6 @@ const actions = {
     render();
   },
 
-  /* kategori */
   "add-kat": () => {
     S.store = { ...S.store, kategori: [...readKategori(), ""] };
     render();
@@ -611,6 +689,14 @@ document.addEventListener("click", async e => {
   try { await fn(el); }
   catch (err) { handleErr(err); }
 });
+
+// Titik slide mengikuti posisi geser (scroll tidak naik ke atas, jadi pakai capture)
+document.addEventListener("scroll", e => {
+  const t = e.target;
+  if (!t.classList?.contains("track")) return;
+  const i = Math.round(t.scrollLeft / (t.clientWidth || 1));
+  t.parentElement.querySelectorAll(".dots i").forEach((d, n) => d.classList.toggle("on", n === i));
+}, true);
 
 document.addEventListener("input", e => {
   const t = e.target;
@@ -635,6 +721,11 @@ document.addEventListener("change", async e => {
     return render();
   }
   if (t.dataset.img) return handleImage(t);
+  if (t.dataset.filter === "range") {
+    S.filter.range = t.value;
+    restartWatch();
+    return refreshOrders();
+  }
   if (t.dataset.filter === "status") { S.filter.status = t.value; return refreshOrders(); }
   if (t.dataset.filter === "po") { S.filter.po = t.checked; return refreshOrders(); }
   if (t.name === "rekIdx") { S.form.rekIdx = +t.value; return render(); }
@@ -645,7 +736,13 @@ document.addEventListener("change", async e => {
   }
 });
 
-addEventListener("hashchange", () => { window.scrollTo(0, 0); render(); });
+addEventListener("hashchange", () => {
+  // Beli langsung hanya berlaku selama di halaman checkout
+  const n = route().name;
+  if (n !== "checkout" && n !== "sukses") S.direct = null;
+  window.scrollTo(0, 0);
+  render();
+});
 
 /* ---------- START ---------- */
 render();
@@ -653,7 +750,12 @@ Promise.all([loadProducts(), loadStore()]).then(render);
 
 api.onUser(user => {
   S.user = user || null;
-  if (user) startWatch();
-  else stopWatch();
+  if (user) {
+    startWatch();
+    runPurge();
+  } else {
+    stopWatch();
+    purged = false;
+  }
   render();
 });
