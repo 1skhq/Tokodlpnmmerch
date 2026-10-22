@@ -1,6 +1,6 @@
 import { ic } from "./icons.js";
 import { $, esc, rp, normWA, productStock, isPOOpen } from "./utils.js";
-import { STATUS, SIZE_PRESET, KATEGORI } from "./config.js";
+import { STATUS, SIZE_PRESET, KATEGORI_AWAL } from "./config.js";
 import { media, swatches } from "./buyer.js";
 
 const TABS = [
@@ -11,6 +11,16 @@ const TABS = [
 ];
 
 const tsMs = ts => (ts?.toMillis ? ts.toMillis() : Date.now());
+
+/* ---------- daftar kategori (dari Firebase, atau bawaan) ---------- */
+export function kategoriList(S) {
+  const saved = Array.isArray(S.store.kategori) && S.store.kategori.length
+    ? S.store.kategori
+    : KATEGORI_AWAL;
+  // Kategori yang sudah dipakai produk tapi belum ada di daftar ikut ditampilkan
+  const dipakai = S.products.map(p => p.category).filter(Boolean);
+  return [...new Set([...saved, ...dipakai])];
+}
 
 /* ---------- LOGIN ---------- */
 export function viewLogin() {
@@ -69,7 +79,7 @@ export function orow(o) {
 
 /* ---------- PRODUK ---------- */
 function products(S) {
-  if (S.draft) return productForm(S.draft);
+  if (S.draft) return productForm(S.draft, S);
   return `
     <div class="btn-row">
       <button class="btn" data-act="new-product">${ic("plus", 18)} Tambah produk</button>
@@ -86,7 +96,7 @@ function prow(p) {
       <div class="thumb sm">${media(p.image, p.colors?.[0]?.hex, 40)}</div>
       <div class="grow">
         <div class="row"><b>${esc(p.name)}</b>${p.isPO ? `<span class="badge po">PO</span>` : ""}</div>
-        <small class="muted">${rp(p.price)} · ${(p.colors || []).length} warna · ${status}</small>
+        <small class="muted">${rp(p.price)} · ${esc(p.category || "-")} · ${(p.colors || []).length} warna · ${status}</small>
         <div class="swatches">${swatches(p.colors)}</div>
       </div>
       <div class="prow-act">
@@ -97,14 +107,15 @@ function prow(p) {
     </div>`;
 }
 
-export function productForm(d) {
+export function productForm(d, S) {
+  const kats = kategoriList(S);
   return `
     <div class="panel" id="pform">
       <h3>${d.id ? "Edit produk" : "Produk baru"}</h3>
       <label>Nama produk<input id="pf-name" value="${esc(d.name)}" placeholder="Contoh: Kaos Polos Basic"></label>
       <div class="two">
         <label>Harga (Rp)<input id="pf-price" type="number" inputmode="numeric" min="0" value="${d.price || ""}"></label>
-        <label>Kategori<select id="pf-cat">${KATEGORI.map(k => `<option ${d.category === k ? "selected" : ""}>${k}</option>`).join("")}</select></label>
+        <label>Kategori<select id="pf-cat">${kats.map(k => `<option ${d.category === k ? "selected" : ""}>${esc(k)}</option>`).join("")}</select></label>
       </div>
       <label>Deskripsi<textarea id="pf-desc" rows="3">${esc(d.description)}</textarea></label>
 
@@ -170,7 +181,7 @@ function colorBlock(c, i) {
     </div>`;
 }
 
-/* Membaca nilai form dari DOM ke objek draft (dipakai sebelum render ulang) */
+/* Membaca nilai form dari DOM ke objek draft */
 export function readProductForm(d) {
   const v = id => $("#" + id)?.value ?? "";
   const num = id => Math.max(0, Math.round(Number(v(id)) || 0));
@@ -213,7 +224,7 @@ function orders(S) {
   const f = S.filter;
   const sel = S.orderSel ? S.orders.find(o => o.id === S.orderSel) : null;
   return `
-    ${sel ? orderDetail(sel) : ""}
+    ${sel ? orderDetail(sel, S) : ""}
     <div class="searchbar">${ic("search", 18)}<input data-filter="q" type="search" placeholder="Cari kode atau nama" value="${esc(f.q)}" autocomplete="off"></div>
     <div class="filters">
       <select data-filter="status">
@@ -227,21 +238,25 @@ function orders(S) {
     <div id="olist">${orderListHTML(S)}</div>`;
 }
 
-function orderDetail(o) {
-  const alamat = [o.customer?.alamat, o.customer?.detail, o.customer?.kota].filter(Boolean).join(", ");
+/* Detail pesanan: data pelanggan bisa diedit admin */
+export function orderDetail(o) {
+  const c = o.customer || {};
+  const alamat = [c.alamat, c.detail, c.kota].filter(Boolean).join(", ");
   return `
     <div class="panel detail">
       <div class="row between">
         <h3 style="margin:0">${esc(o.code)}</h3>
         <button class="icon-btn" data-act="close-order" aria-label="Tutup">${ic("x", 18)}</button>
       </div>
-      <div class="info">${ic("user", 16)} <span>${esc(o.customer?.name)}</span>
-        <a href="https://wa.me/${normWA(o.customer?.phone)}" target="_blank" rel="noopener">${ic("chat", 16)} Chat Pembeli</a>
+
+      <div class="info">${ic("user", 16)} <span>${esc(c.name)}</span>
+        <a href="https://wa.me/${normWA(c.phone)}" target="_blank" rel="noopener">${ic("chat", 16)} Chat Pembeli</a>
       </div>
       <div class="info">${ic("pin", 16)} <span>${esc(alamat)}</span></div>
-      ${o.customer?.catatan ? `<div class="info">${ic("alert", 16)} <span>${esc(o.customer.catatan)}</span></div>` : ""}
+      ${c.catatan ? `<div class="info">${ic("alert", 16)} <span>${esc(c.catatan)}</span></div>` : ""}
       <div class="info">${ic("wallet", 16)} <span>${esc(o.payment)} · <b>${rp(o.total)}</b></span></div>
       ${o.hasPO ? `<div class="notice info">${ic("calendar", 18)} PO · estimasi ${esc(o.poEstimate)}</div>` : ""}
+
       <div class="items">
         ${(o.items || []).map(i => `
           <div class="item-line">
@@ -250,6 +265,18 @@ function orderDetail(o) {
             <b>× ${i.qty}</b>
           </div>`).join("")}
       </div>
+
+      <details class="edit-cust">
+        <summary>${ic("edit", 16)} Ubah data pelanggan</summary>
+        <label>Nama<input id="ec-name" value="${esc(c.name)}"></label>
+        <label>Nomor WhatsApp<input id="ec-phone" type="tel" inputmode="tel" value="${esc(c.phone)}"></label>
+        <label>Kota / Kabupaten<input id="ec-kota" value="${esc(c.kota)}"></label>
+        <label>Alamat lengkap<textarea id="ec-alamat" rows="2">${esc(c.alamat)}</textarea></label>
+        <label>Detail tambahan<input id="ec-detail" value="${esc(c.detail)}"></label>
+        <label>Catatan<input id="ec-catatan" value="${esc(c.catatan)}"></label>
+        <button class="btn ghost block" data-act="save-customer" data-id="${esc(o.id)}">${ic("check", 18)} Simpan data pelanggan</button>
+      </details>
+
       <label>Status
         <select id="ds">${STATUS.map(s => `<option ${s === o.status ? "selected" : ""}>${s}</option>`).join("")}</select>
       </label>
@@ -257,13 +284,15 @@ function orderDetail(o) {
         <label>Kurir<input id="dk" value="${esc(o.courier)}" placeholder="JNE, J&T, SiCepat…"></label>
         <label>Nomor resi<input id="dr" value="${esc(o.trackingNumber)}"></label>
       </div>
-      <button class="btn block" data-act="save-order" data-id="${esc(o.id)}">${ic("check", 18)} Simpan perubahan</button>
+      <button class="btn block" data-act="save-order" data-id="${esc(o.id)}">${ic("check", 18)} Simpan status & resi</button>
     </div>`;
 }
 
 /* ---------- TOKO ---------- */
 function settings(S) {
-  const s = S.store || {}, b = s.bank || {};
+  const s = S.store || {};
+  const rek = rekeningList(s);
+  const kats = kategoriList(S);
   const logo = S.imgTmp.logo ?? s.logo ?? "";
   const qris = S.imgTmp.qris ?? s.qris ?? "";
   return `
@@ -281,9 +310,18 @@ function settings(S) {
 
     <div class="panel">
       <h3>Rekening bank</h3>
-      <label>Nama bank<input id="s-bank" value="${esc(b.name)}" placeholder="BCA / BRI / Mandiri"></label>
-      <label>Nomor rekening<input id="s-rek" inputmode="numeric" value="${esc(b.number)}"></label>
-      <label>Atas nama<input id="s-holder" value="${esc(b.holder)}"></label>
+      <div id="rek-list">
+        ${rek.map((r, i) => `
+          <div class="color-block">
+            <div class="row between"><b class="small">Rekening ${i + 1}</b>
+              <button class="icon-btn danger" data-act="del-rek" data-i="${i}" aria-label="Hapus rekening">${ic("trash", 18)}</button>
+            </div>
+            <label>Nama bank<input id="rb-name-${i}" value="${esc(r.name)}" placeholder="BCA / BRI / Mandiri"></label>
+            <label>Nomor rekening<input id="rb-num-${i}" inputmode="numeric" value="${esc(r.number)}"></label>
+            <label>Atas nama<input id="rb-holder-${i}" value="${esc(r.holder)}"></label>
+          </div>`).join("")}
+      </div>
+      <button class="btn ghost block" data-act="add-rek">${ic("plus", 18)} Tambah rekening</button>
     </div>
 
     <div class="panel">
@@ -296,5 +334,25 @@ function settings(S) {
       </div>
     </div>
 
+    <div class="panel">
+      <h3>Kategori produk</h3>
+      <div id="kat-list">
+        ${kats.map((k, i) => `
+          <div class="row" style="margin-bottom:8px">
+            <input class="grow" id="kat-${i}" value="${esc(k)}">
+            <button class="icon-btn danger" data-act="del-kat" data-i="${i}" aria-label="Hapus kategori">${ic("trash", 18)}</button>
+          </div>`).join("")}
+      </div>
+      <button class="btn ghost block" data-act="add-kat">${ic("plus", 18)} Tambah kategori</button>
+      <p class="muted small">Kategori yang dihapus tidak mengubah produk yang sudah memakainya.</p>
+    </div>
+
     <button class="btn block big" data-act="save-settings">${ic("check", 18)} Simpan pengaturan</button>`;
+}
+
+/* Rekening: mendukung format lama (satu objek bank) dan format baru (array) */
+export function rekeningList(s) {
+  if (Array.isArray(s.rekening)) return s.rekening;
+  if (s.bank?.number) return [{ ...s.bank }];
+  return [];
 }
