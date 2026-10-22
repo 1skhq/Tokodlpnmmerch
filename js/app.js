@@ -1,5 +1,5 @@
-import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isAvailable, isPOOpen, sizeStock } from "./utils.js";
-import { STATUS, KATEGORI } from "./config.js";
+import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isPOOpen, sizeStock } from "./utils.js";
+import { STATUS, KATEGORI_AWAL } from "./config.js";
 import * as api from "./data.js";
 import { getCart, addItem, setQty, removeItem, clearCart, cartCount, cartTotal } from "./cart.js";
 import * as B from "./buyer.js";
@@ -7,7 +7,7 @@ import * as A from "./admin.js";
 import { pasangAutocomplete } from "./address.js";
 import { ic } from "./icons.js";
 
-const DEFAULT_FORM = { pay: "Transfer Bank", nama: "", phone: "", kota: "", alamat: "", detail: "", catatan: "", poOk: false };
+const DEFAULT_FORM = { pay: "Transfer Bank", rekIdx: 0, nama: "", phone: "", kota: "", alamat: "", detail: "", catatan: "", poOk: false };
 
 /* ---------- STATE ---------- */
 const S = {
@@ -22,7 +22,6 @@ const S = {
 };
 
 /* ---------- ROUTING ---------- */
-// Mendukung "#admin", "#/admin", "#/produk/ID", "#/keranjang", "#/checkout", "#/sukses", "#/cek"
 const route = () => {
   const [name = "", arg = ""] = location.hash.replace(/^#\/?/, "").split("/");
   return { name, arg: decodeURIComponent(arg) };
@@ -104,7 +103,7 @@ function uniqueSizes(list) {
 
 function blankProduct() {
   return {
-    id: null, name: "", price: 0, category: KATEGORI[0], description: "", image: "",
+    id: null, name: "", price: 0, category: S.store.kategori?.[0] || KATEGORI_AWAL[0], description: "", image: "",
     isPO: false, poEstimate: "", poDeadline: "", poQuota: 0, poSold: 0, poNote: "", poClosed: false,
     colors: [{ name: "", hex: "#111111", image: "", sizes: [{ size: "S", stock: 0 }] }],
   };
@@ -229,7 +228,6 @@ async function submitOrder() {
   const hasPO = items.some(i => i.isPO);
   if (hasPO && !f.poOk) return toast("Centang persetujuan Pre-Order dulu", "warn");
 
-  // Validasi stok terakhir sebelum menyimpan
   for (const i of items) {
     const p = S.products.find(x => x.id === i.id);
     if (!p) return toast(`${i.name} sudah tidak tersedia. Hapus dari keranjang.`, "error");
@@ -238,6 +236,11 @@ async function submitOrder() {
       return toast(`Stok ${i.name} (${i.color}, ${i.size}) tidak cukup. Ubah jumlahnya.`, "warn");
     }
   }
+
+  // Simpan rekening yang dipilih pembeli (jika lebih dari satu)
+  const list = A.rekeningList(S.store);
+  const rek = list[Math.min(+f.rekIdx || 0, list.length - 1)];
+  const payment = f.pay === "QRIS" ? "QRIS" : rek ? `Transfer ${rek.name} ${rek.number}` : "Transfer Bank";
 
   const code = genCode();
   const order = {
@@ -250,7 +253,7 @@ async function submitOrder() {
     items: items.map(({ name, color, size, qty, price, isPO, poEstimate }) =>
       ({ name, color, size, qty, price, isPO, poEstimate })),
     total: cartTotal(items),
-    payment: f.pay,
+    payment,
     status: STATUS[0],
     hasPO,
     poEstimate: [...new Set(items.filter(i => i.isPO).map(i => i.poEstimate).filter(Boolean))].join("; "),
@@ -303,7 +306,6 @@ async function handleImage(t) {
       S.draft.colors[+t.dataset.i].image = url;
       render();
     } else {
-      // logo / qris: tampilkan pratinjau tanpa render ulang agar input form tidak hilang
       S.imgTmp[k] = url;
       const prev = $("#prev-" + k);
       if (prev) { prev.src = url; prev.hidden = false; }
@@ -387,6 +389,27 @@ async function seedProducts() {
   }
 }
 
+/* Data pelanggan: admin memperbaiki kesalahan input pembeli */
+async function saveCustomer(id) {
+  const v = k => $("#ec-" + k).value.trim();
+  const phone = v("phone").replace(/\D/g, "");
+  if (!v("name")) return toast("Nama tidak boleh kosong", "warn");
+  if (phone.length < 9) return toast("Nomor WhatsApp belum valid", "warn");
+  if (!v("alamat")) return toast("Alamat tidak boleh kosong", "warn");
+  if (!v("kota")) return toast("Kota tidak boleh kosong", "warn");
+
+  const customer = {
+    name: v("name"), phone, kota: v("kota"), alamat: v("alamat"),
+    detail: v("detail"), catatan: v("catatan"),
+  };
+  try {
+    await api.updateOrder(id, { customer, updatedAt: api.serverTimestamp() });
+    toast("Data pelanggan diperbarui", "ok");
+  } catch (e) {
+    handleErr(e);
+  }
+}
+
 async function saveOrder(id) {
   const status = $("#ds").value;
   const courier = $("#dk").value.trim();
@@ -400,17 +423,45 @@ async function saveOrder(id) {
   }
 }
 
+/* Membaca daftar rekening dari form admin */
+function readRekening() {
+  const n = document.querySelectorAll("#rek-list .color-block").length;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const v = k => $(`#rb-${k}-${i}`)?.value.trim() || "";
+    const r = { name: v("name"), number: v("num").replace(/\s/g, ""), holder: v("holder") };
+    if (r.name || r.number) out.push(r);
+  }
+  return out;
+}
+
+/* Membaca daftar kategori dari form admin */
+function readKategori() {
+  const n = document.querySelectorAll("#kat-list input").length;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const v = $("#kat-" + i)?.value.trim();
+    if (v && !out.includes(v)) out.push(v);
+  }
+  return out;
+}
+
 async function saveSettings() {
   const v = id => $("#" + id).value.trim();
+  const rekening = readRekening();
+  const kategori = readKategori();
   const data = {
     storeName: v("s-name"),
     adminWa: v("s-wa"),
-    bank: { name: v("s-bank"), number: v("s-rek"), holder: v("s-holder") },
+    rekening,
+    bank: rekening[0] || { name: "", number: "", holder: "" }, // kompatibilitas data lama
+    kategori,
     logo: S.imgTmp.logo ?? S.store.logo ?? "",
     qris: S.imgTmp.qris ?? S.store.qris ?? "",
   };
   if (!data.storeName) return toast("Isi nama toko", "warn");
   if (data.adminWa && normalizeLen(data.adminWa) < 10) return toast("Nomor WA tidak valid", "warn");
+  if (!kategori.length) return toast("Minimal satu kategori", "warn");
   if (!checkDocSize(data)) return;
   try {
     await api.saveStore(data);
@@ -522,7 +573,33 @@ const actions = {
   "open-order": el => { S.tab = "orders"; S.orderSel = el.dataset.id; render(); },
   "close-order": () => { S.orderSel = null; render(); },
   "save-order": el => saveOrder(el.dataset.id),
+  "save-customer": el => saveCustomer(el.dataset.id),
   "save-settings": () => saveSettings(),
+
+  /* rekening */
+  "add-rek": () => {
+    const cur = readRekening();
+    S.store = { ...S.store, rekening: [...cur, { name: "", number: "", holder: "" }] };
+    render();
+  },
+  "del-rek": el => {
+    const cur = readRekening();
+    cur.splice(+el.dataset.i, 1);
+    S.store = { ...S.store, rekening: cur };
+    render();
+  },
+
+  /* kategori */
+  "add-kat": () => {
+    S.store = { ...S.store, kategori: [...readKategori(), ""] };
+    render();
+  },
+  "del-kat": el => {
+    const cur = readKategori();
+    cur.splice(+el.dataset.i, 1);
+    S.store = { ...S.store, kategori: cur };
+    render();
+  },
 };
 
 /* ---------- EVENT DELEGATION ---------- */
@@ -560,6 +637,7 @@ document.addEventListener("change", async e => {
   if (t.dataset.img) return handleImage(t);
   if (t.dataset.filter === "status") { S.filter.status = t.value; return refreshOrders(); }
   if (t.dataset.filter === "po") { S.filter.po = t.checked; return refreshOrders(); }
+  if (t.name === "rekIdx") { S.form.rekIdx = +t.value; return render(); }
   if (t.hasAttribute("data-form")) {
     if (t.type === "radio") { S.form.pay = t.value; return render(); }
     if (t.type === "checkbox") S.form[t.name] = t.checked;
