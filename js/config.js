@@ -15,11 +15,21 @@ export const firebaseConfig = {
 
 
 
-// Batas gambar & dokumen Firestore (maks 1 MB per dokumen)
-export const IMG = { maxPx: 800, quality: 0.7, targetChars: 150000 };
+// Kompresi foto (dibuat lebih kecil agar muat banyak foto dalam 1 MB per dokumen)
+export const IMG = { maxPx: 800, quality: 0.7, targetChars: 110000 };
+
+// Batas dokumen Firestore (maks 1 MB per dokumen)
 export const DOC = { warnBytes: 800000, maxBytes: 1000000 };
 
-// Status pesanan
+// Batas fitur
+export const LIMITS = {
+  orders: 100,      // jumlah pesanan terbaru yang dimuat
+  gallery: 5,       // foto per produk
+  banner: 5,        // foto banner beranda
+  retainDays: 365,  // pesanan lebih tua dari ini dihapus otomatis
+  purgeBatch: 50,   // jumlah dihapus per batch
+};
+
 export const STATUS = [
   "Menunggu Pembayaran", "Pembayaran Diterima", "Menunggu Barang PO",
   "Diproses", "Dikirim", "Selesai",
