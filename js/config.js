@@ -40,3 +40,12 @@ export const SIZE_PRESET = ["S", "M", "L", "XL", "XXL"];
 
 // Kategori awal (dipakai jika belum ada kategori tersimpan di Firebase)
 export const KATEGORI_AWAL = ["Best Seller", "Lainnya"];
+
+
+// Kontak & sosial media (tampil di halaman pembeli)
+export const CONTACT = {
+  wa: "6285182247816",          // format internasional tanpa + dan spasi
+  waDisplay: "+62 851-8224-7816",
+  tiktok: "dlpnmmerch",
+  instagram: "dlpnmmerch",
+};
