@@ -74,9 +74,9 @@ export function viewHome(S) {
   return `
     <section class="hero">
       <div>
-        <span class="eyebrow">${ic("spark", 14)} Koleksi terbaru</span>
+        <span class="eyebrow">${ic("spark", 14)} SELAMAT DATANG DI DLPNM MERCH</span>
         <h1>${esc(S.store.storeName || "Toko Pakaian")}</h1>
-        <p class="muted">Pilih warna & ukuran, checkout, lalu lanjut ke WhatsApp.</p>
+        <p class="muted">Selamat Berbelanja.</p>
       </div>
       <div class="hero-art">${shirt("#2748d6", 54)}${shirt("#f59e0b", 68)}${shirt("#10b981", 50)}</div>
     </section>
