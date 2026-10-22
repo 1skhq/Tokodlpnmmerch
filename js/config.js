@@ -15,14 +15,18 @@ export const firebaseConfig = {
 
 
 
-// 4) Batas gambar & dokumen Firestore (maks 1 MB per dokumen)
+// Batas gambar & dokumen Firestore (maks 1 MB per dokumen)
 export const IMG = { maxPx: 800, quality: 0.7, targetChars: 150000 };
 export const DOC = { warnBytes: 800000, maxBytes: 1000000 };
 
-// 5) Pilihan umum
+// Status pesanan
 export const STATUS = [
   "Menunggu Pembayaran", "Pembayaran Diterima", "Menunggu Barang PO",
   "Diproses", "Dikirim", "Selesai",
 ];
+
+// Ukuran cepat untuk admin
 export const SIZE_PRESET = ["S", "M", "L", "XL", "XXL"];
-export const KATEGORI = ["Kaos", "Kemeja", "Jaket", "Celana", "Lainnya"];
+
+// Kategori awal (dipakai jika belum ada kategori tersimpan di Firebase)
+export const KATEGORI_AWAL = ["Kaos", "Kemeja", "Jaket", "Celana", "Lainnya"];
