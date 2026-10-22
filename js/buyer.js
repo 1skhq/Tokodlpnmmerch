@@ -88,8 +88,8 @@ export function viewHome(S) {
   const name = esc(S.store.storeName || "Toko Pakaian");
   const head = S.banner?.length
     ? `<div class="banner">${slider(S.banner, "banner-s")}</div>
-       <div class="page-head"><h1>$Tes</h1>
-       <p class="muted small">Pilih warna & ukuran, checkout, lalu lanjut ke WhatsApp.</p></div>`
+       <div class="page-head"><h1>${name}</h1>
+       <p class="muted small">Pilih warna & ukuran, checkout, lalu lanjut ke .</p></div>`
     : `<section class="hero">
          <div>
            <span class="eyebrow">${ic("spark", 14)} Koleksi terbaru</span>
