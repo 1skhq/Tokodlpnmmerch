@@ -93,8 +93,8 @@ export function viewHome(S) {
     : `<section class="hero">
          <div>
            <span class="eyebrow">${ic("spark", 14)} Koleksi terbaru</span>
-           <h1>${tes}</h1>
-           <p class="muted">Pilih warna & ukuran, checkout, lalu lanjut ke WhatsApp.</p>
+           <h1>${name}</h1>
+           <p class="muted">tes.</p>
          </div>
          <div class="hero-art">${shirt("#2748d6", 54)}${shirt("#f59e0b", 68)}${shirt("#10b981", 50)}</div>
        </section>`;
