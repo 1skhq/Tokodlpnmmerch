@@ -1,2 +1,2 @@
 # Tokodlpnmmerch
-Toko
+Pembelian dan Pree Order Produk Dlpnm Merch.
