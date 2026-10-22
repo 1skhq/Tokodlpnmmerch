@@ -29,4 +29,4 @@ export const STATUS = [
 export const SIZE_PRESET = ["S", "M", "L", "XL", "XXL"];
 
 // Kategori awal (dipakai jika belum ada kategori tersimpan di Firebase)
-export const KATEGORI_AWAL = ["Kaos", "Kemeja", "Jaket", "Celana", "Lainnya"];
+export const KATEGORI_AWAL = ["Best Seller", "Lainnya"];
