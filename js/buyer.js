@@ -20,6 +20,20 @@ export function media(src, hex = "#e5e7eb", size = 64) {
     : `<div class="ph" style="--tint:${esc(hex)}">${shirt(hex, size)}</div>`;
 }
 
+// Slide yang bisa digeser. list = array URL/base64 gambar.
+export function slider(list, kind = "") {
+  if (!list.length) return "";
+  return `
+    <div class="slider ${kind}">
+      <div class="track">
+        ${list.map((s, i) => `<div class="slide"><img src="${s}" alt="" ${i ? 'loading="lazy"' : ""}></div>`).join("")}
+      </div>
+      ${list.length > 1
+        ? `<div class="dots">${list.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>`
+        : ""}
+    </div>`;
+}
+
 export function badge(p) {
   if (p.isPO) {
     return isPOOpen(p)
@@ -45,7 +59,7 @@ function pcard(p) {
     : (stok > 0 ? `Stok ${stok}` : "Stok habis");
   return `
     <a class="pcard" href="#/produk/${esc(p.id)}">
-      <div class="thumb">${media(p.image, p.colors?.[0]?.hex)}${badge(p)}</div>
+      <div class="thumb">${media(p.images?.[0], p.colors?.[0]?.hex)}${badge(p)}</div>
       <div class="pbody">
         <h3>${esc(p.name)}</h3>
         <div class="price">${rp(p.price)}</div>
@@ -71,19 +85,27 @@ export function viewHome(S) {
     return emptyState(ic("alert", 44), "Produk gagal dimuat", "Periksa koneksi internet Anda.",
       `<button class="btn" data-act="reload">${ic("spark", 18)} Muat ulang</button>`);
   }
+  const name = esc(S.store.storeName || "Toko Pakaian");
+  const head = S.banner?.length
+    ? `<div class="banner">${slider(S.banner, "banner-s")}</div>
+       <div class="page-head"><h1>${name}</h1>
+       <p class="muted small">Pilih warna & ukuran, checkout, lalu lanjut ke WhatsApp.</p></div>`
+    : `<section class="hero">
+         <div>
+           <span class="eyebrow">${ic("spark", 14)} Koleksi terbaru</span>
+           <h1>${name}</h1>
+           <p class="muted">Pilih warna & ukuran, checkout, lalu lanjut ke WhatsApp.</p>
+         </div>
+         <div class="hero-art">${shirt("#2748d6", 54)}${shirt("#f59e0b", 68)}${shirt("#10b981", 50)}</div>
+       </section>`;
+
   const kats = S.store.kategori?.length
     ? S.store.kategori
     : [...new Set(S.products.map(p => p.category).filter(Boolean))];
   const cats = ["Semua", "Pre-Order", ...new Set([...kats, ...S.products.map(p => p.category).filter(Boolean)])];
+
   return `
-    <section class="hero">
-      <div>
-        <span class="eyebrow">${ic("spark", 14)} Koleksi terbaru</span>
-        <h1>${esc(S.store.storeName || "Toko Pakaian")}</h1>
-        <p class="muted">Pilih warna & ukuran, checkout, lalu lanjut ke WhatsApp.</p>
-      </div>
-      <div class="hero-art">${shirt("#2748d6", 54)}${shirt("#f59e0b", 68)}${shirt("#10b981", 50)}</div>
-    </section>
+    ${head}
     <div class="searchbar">${ic("search", 18)}<input id="q" type="search" placeholder="Cari produk…" value="${esc(S.search)}" autocomplete="off"></div>
     <div class="chips">
       ${cats.map(c => `<button class="chip ${c === S.cat ? "on" : ""}" data-act="cat" data-val="${esc(c)}">${c === "Pre-Order" ? ic("calendar", 14) : ""}${esc(c)}</button>`).join("")}
@@ -114,6 +136,9 @@ export function viewProduct(p, S) {
   const color = p.colors.find(c => c.name === pk.color) || p.colors[0];
   const open = p.isPO ? isPOOpen(p) : productStock(p) > 0;
 
+  // Foto warna yang dipilih didahulukan, lalu galeri produk
+  const photos = [...new Set([color?.image, ...(p.images || [])].filter(Boolean))];
+
   const colorHTML = p.colors.map(c => {
     const total = (c.sizes || []).reduce((t, z) => t + (Number(z.stock) || 0), 0);
     const off = !p.isPO && total === 0;
@@ -130,9 +155,14 @@ export function viewProduct(p, S) {
     </button>`;
   }).join("") || `<p class="muted">Ukuran belum diatur.</p>`;
 
+  const canBuy = open && pk.size;
+
   return `
     <div class="product">
-      <div class="thumb xl">${media(color?.image || p.image, color?.hex, 120)}${badge(p)}</div>
+      <div class="thumb xl">
+        ${photos.length ? slider(photos, "pslider") : media("", color?.hex, 120)}
+        ${badge(p)}
+      </div>
       <div class="pinfo">
         <h1>${esc(p.name)}</h1>
         <div class="price-big">${rp(p.price)}</div>
@@ -147,9 +177,14 @@ export function viewProduct(p, S) {
           <span>${pk.qty}</span>
           <button data-act="qty" data-d="1" aria-label="Tambah">${ic("plus", 18)}</button>
         </div>
-        <button class="btn block big" data-act="add" ${open && pk.size ? "" : "disabled"}>
-          ${ic("cart", 20)} ${open ? "Tambah ke Keranjang" : p.isPO ? "PO Ditutup" : "Stok Habis"}
-        </button>
+        <div class="btn-stack">
+          <button class="btn block big" data-act="buy-now" ${canBuy ? "" : "disabled"}>
+            ${ic("truck", 20)} ${open ? "Beli Langsung" : p.isPO ? "PO Ditutup" : "Stok Habis"}
+          </button>
+          <button class="btn ghost block" data-act="add" ${canBuy ? "" : "disabled"}>
+            ${ic("cart", 20)} Tambah ke Keranjang
+          </button>
+        </div>
         ${p.description ? `<p class="desc">${esc(p.description)}</p>` : ""}
         <a class="link" href="#/keranjang">${ic("cart", 16)} Lihat keranjang</a>
       </div>
@@ -162,7 +197,7 @@ function cartRow(i, S) {
   const color = p?.colors?.find(c => c.name === i.color);
   return `
     <div class="cart-row">
-      <div class="thumb sm">${media(color?.image || p?.image, color?.hex || "#e5e7eb", 40)}</div>
+      <div class="thumb sm">${media(p?.images?.[0], color?.hex || "#e5e7eb", 40)}</div>
       <div class="grow">
         <div class="cname">${esc(i.name)} ${i.isPO ? `<span class="badge po">PO</span>` : ""}</div>
         <div class="meta"><span class="dot" style="background:${esc(color?.hex || "#e5e7eb")}"></span>${esc(i.color)} <span class="tag">${esc(i.size)}</span></div>
@@ -221,8 +256,8 @@ function payBox(pay, st, idx = 0) {
     </div>`;
 }
 
-export function viewCheckout(S) {
-  const items = getCart();
+// items = daftar barang yang dipesan (dari keranjang, atau satu barang jika "Beli Langsung")
+export function viewCheckout(S, items) {
   if (!items.length) return viewCart(S);
   const f = S.form, pay = f.pay || "Transfer Bank";
   const hasPO = items.some(i => i.isPO);
@@ -230,10 +265,11 @@ export function viewCheckout(S) {
   return `
     <h2 class="page-title">${ic("truck", 22)} Checkout</h2>
     <div class="steps">
-      <span class="step done">${ic("cart", 14)} Keranjang</span>
+      <span class="step done">${ic("cart", 14)} ${S.direct ? "Produk" : "Keranjang"}</span>
       <span class="step on">${ic("user", 14)} Data</span>
       <span class="step">${ic("check", 14)} Selesai</span>
     </div>
+    ${S.direct ? `<div class="notice info">${ic("truck", 18)} Mode beli langsung: hanya barang ini yang dipesan. Keranjang Anda tidak berubah.</div>` : ""}
 
     <div class="panel">
       <h3>Data penerima</h3>
