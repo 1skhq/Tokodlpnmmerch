@@ -89,7 +89,7 @@ export function viewHome(S) {
   const head = S.banner?.length
     ? `<div class="banner">${slider(S.banner, "banner-s")}</div>
        <div class="page-head"><h1>${name}</h1>
-       <p class="muted small">Di Dlpnm Merch, Brand Yang Khusus Menjual Untuk Anggota Pagar Nusa.</p></div>`
+       <p class="muted small">Di Dlpnm Merch, merchandise kebanggaan keluarga besar Pagar Nusa. Kami hadir untuk menyediakan berbagai produk pilihan khusus bagi anggota Pagar Nusa. temukan produk favoritmu, dan selamat berbelanja!.</p></div>`
     : `<section class="hero">
          <div>
            <span class="eyebrow">${ic("spark", 14)} Koleksi terbaru</span>
