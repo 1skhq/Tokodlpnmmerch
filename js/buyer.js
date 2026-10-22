@@ -85,11 +85,11 @@ export function viewHome(S) {
     return emptyState(ic("alert", 44), "Produk gagal dimuat", "Periksa koneksi internet Anda.",
       `<button class="btn" data-act="reload">${ic("spark", 18)} Muat ulang</button>`);
   }
-  const name = esc(S.store.storeName || "Toko Pakaian");
+  const name = "tes";
   const head = S.banner?.length
     ? `<div class="banner">${slider(S.banner, "banner-s")}</div>
        <div class="page-head"><h1>${name}</h1>
-       <p class="muted small">Dlpnm Merch Adalah Brand Yang Khusus Menjual Untuk Anggota Pagar Nusa.Berkualitas Dan Terpercaya.</p></div>`
+       <p class="muted small">Local Brand Yang Khusus Menjual Untuk Anggota Pagar Nusa.</p></div>`
     : `<section class="hero">
          <div>
            <span class="eyebrow">${ic("spark", 14)} Koleksi terbaru</span>
