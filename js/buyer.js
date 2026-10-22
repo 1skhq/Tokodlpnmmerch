@@ -73,12 +73,10 @@ export function viewHome(S) {
   const cats = ["Semua", "Pre-Order", ...new Set(S.products.map(p => p.category).filter(Boolean))];
   return `
     <section class="hero">
-      <div>
-        <span class="eyebrow">${ic("spark", 14)} SELAMAT DATANG DI DLPNM MERCH</span>
-        <h1>${esc(S.store.storeName || "Toko Pakaian")}</h1>
-        <p class="muted">Selamat Berbelanja.</p>
+      <div class="hero-text">
+        <h1>Selamat Datang di Dlpnm Shop</h1>
+        <p>Silakan berbelanja artikel apparel eksklusif kami. Pilih varian warna dan ukuran favoritmu, lalu amankan slot pesanan sebelum kuota rilis ditutup.</p>
       </div>
-      <div class="hero-art">${shirt("#2748d6", 54)}${shirt("#f59e0b", 68)}${shirt("#10b981", 50)}</div>
     </section>
     <div class="searchbar">${ic("search", 18)}<input id="q" type="search" placeholder="Cari produk…" value="${esc(S.search)}" autocomplete="off"></div>
     <div class="chips">
