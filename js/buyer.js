@@ -3,7 +3,7 @@ import {
   esc, rp, normWA, productStock, sizeStock, isPOOpen, daysLeft, sisaKuota,
 } from "./utils.js";
 import { getCart, cartTotal } from "./cart.js";
-import { STATUS } from "./config.js";
+import { STATUS, CONTACT } from "./config.js";
 import { rekeningList } from "./admin.js";
 
 /* ---------- komponen dasar ---------- */
@@ -77,6 +77,29 @@ export function gridHTML(S) {
   );
   if (!list.length) return emptyState(ic("search", 40), "Produk tidak ditemukan", "Coba kata kunci atau kategori lain.");
   return list.map(pcard).join("");
+  
+  export function contactBlock() {
+  return `
+    <section class="contact panel">
+      <h3>Hubungi kami</h3>
+      <a class="crow" href="https://wa.me/${CONTACT.wa}" target="_blank" rel="noopener">
+        <span class="cic wa">${ic("chat", 18)}</span>
+        <span class="grow"><b>WhatsApp</b><small class="muted">${esc(CONTACT.waDisplay)}</small></span>
+        ${ic("send", 16)}
+      </a>
+      <a class="crow" href="https://www.tiktok.com/@${esc(CONTACT.tiktok)}" target="_blank" rel="noopener">
+        <span class="cic tt">${ic("spark", 18)}</span>
+        <span class="grow"><b>TikTok</b><small class="muted">@${esc(CONTACT.tiktok)}</small></span>
+        ${ic("send", 16)}
+      </a>
+      <a class="crow" href="https://www.instagram.com/${esc(CONTACT.instagram)}" target="_blank" rel="noopener">
+        <span class="cic ig">${ic("image", 18)}</span>
+        <span class="grow"><b>Instagram</b><small class="muted">@${esc(CONTACT.instagram)}</small></span>
+        ${ic("send", 16)}
+      </a>
+    </section>`;
+}
+
 }
 
 export function viewHome(S) {
