@@ -752,4 +752,20 @@ input:focus, select:focus, textarea:focus {
 .gadd{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;aspect-ratio:1;border:1.5px dashed #a5b4fc;border-radius:12px;color:var(--accent);font-size:13px;cursor:pointer}
 .gadd.wide{aspect-ratio:16/8}
 
+/* ---------- kontak ---------- */
+.contact{margin-top:18px}
+.contact h3{margin-top:0}
+.crow{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);color:var(--ink)}
+.crow:last-child{border-bottom:0}
+.crow:active{background:#f9fafb}
+.cic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none;color:#fff}
+.cic.wa{background:#25d366}
+.cic.tt{background:#111827}
+.cic.ig{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}
+
+/* ---------- tombol WhatsApp melayang ---------- */
+.wa-fab{position:fixed;right:16px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:30;
+  width:56px;height:56px;border-radius:50%;background:#25d366;color:#fff;display:grid;place-items:center;
+  box-shadow:0 6px 18px rgba(37,211,102,.45);transition:transform .15s}
+.wa-fab:active{transform:scale(.94)}
 
