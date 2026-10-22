@@ -133,7 +133,8 @@ export function viewHome(S) {
     <div class="chips">
       ${cats.map(c => `<button class="chip ${c === S.cat ? "on" : ""}" data-act="cat" data-val="${esc(c)}">${c === "Pre-Order" ? ic("calendar", 14) : ""}${esc(c)}</button>`).join("")}
     </div>
-    <div class="grid" id="grid">${gridHTML(S)}</div>`;
+        <div class="grid" id="grid">${gridHTML(S)}</div>
+    ${contactBlock()}`;
 }
 
 /* ---------- DETAIL PRODUK ---------- */
