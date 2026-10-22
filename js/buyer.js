@@ -86,12 +86,11 @@ export function viewHome(S) {
       `<button class="btn" data-act="reload">${ic("spark", 18)} Muat ulang</button>`);
   }
   const name = esc(S.store.storeName || "Toko Pakaian");
-  const cats = ["Semua", "Pre-Order", ...new Set(S.products.map(p => p.category).filter(Boolean))];
-  return `
-    <section class="hero">
-      <div class="hero-text">
-        <h1>Selamat Datang di Dlpnm Shop</h1>
-        <p>Silakan berbelanja artikel apparel eksklusif kami. Pilih varian warna dan ukuran favoritmu, lalu amankan slot pesanan sebelum kuota rilis ditutup.</p>
+  const head = S.banner?.length
+    ? `<div class="banner">${slider(S.banner, "banner-s")}</div>
+       <div class="page-head"><h1>${name}</h1>
+       <p class="muted small">Pilih warna & ukuran, checkout, lalu lanjut ke WhatsApp.</p></div>`
+    : `<section class="hero">
          <div>
            <span class="eyebrow">${ic("spark", 14)} Koleksi terbaru</span>
            <h1>${name}</h1>
