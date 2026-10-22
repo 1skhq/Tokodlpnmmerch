@@ -240,59 +240,100 @@ input:focus, select:focus, textarea:focus {
 .bottomnav a.on { color: var(--ink); font-weight: 700; }
 
 /* ---------- BERANDA & HERO ---------- */
+/* ---------- BANNER HERO MODERN ---------- */
 .hero {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 22px;
+  gap: 16px;
+  padding: 22px 20px;
   border-radius: 24px;
-  background: var(--ink);
+  background: radial-gradient(130% 120% at 85% 15%, #1e293b 0%, #090d16 100%);
   color: #fff;
   margin-bottom: 16px;
-  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.28);
 }
-.hero p { margin: 6px 0 0; color: #94a3b8; font-size: 14px; }
+
+/* Pencahayaan ambient halus di sudut banner */
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 170px;
+  height: 170px;
+  background: radial-gradient(circle, rgba(37, 71, 244, 0.4) 0%, rgba(37, 71, 244, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero h1, .hero h2 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 6px 0 4px;
+  line-height: 1.2;
+}
+
+.hero p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 190px;
+}
+
 .eyebrow {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  font-size: 12px;
-  color: #fff;
-  background: rgba(255,255,255,0.12);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 4px 10px;
   border-radius: 99px;
-  font-weight: 600;
 }
-.hero-art { display: flex; align-items: flex-end; flex: none; }
-.hero-art svg:nth-child(2) { margin: 0 -10px; }
 
-.searchbar {
+/* Layering dan efek kedalaman dinamis untuk ikon grafis */
+.hero-art {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 16px;
-  border: 1px solid var(--line);
-  border-radius: 99px;
-  background: #fff;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow);
-  transition: box-shadow .15s ease, border-color .15s ease;
+  justify-content: center;
+  flex: none;
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.5));
 }
-.searchbar:focus-within {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+
+.hero-art svg {
+  transition: transform 0.2s ease;
 }
-.searchbar input {
-  border: 0;
-  margin: 0;
-  padding: 13px 0;
-  background: transparent;
-  outline: none;
-  width: 100%;
-  font-size: 14px;
+
+.hero-art svg:nth-child(1) {
+  transform: scale(0.88) rotate(-9deg) translateY(4px);
+  opacity: 0.8;
 }
+
+.hero-art svg:nth-child(2) {
+  margin: 0 -16px;
+  transform: scale(1.12) translateY(-4px);
+  z-index: 2;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.hero-art svg:nth-child(3) {
+  transform: scale(0.88) rotate(9deg) translateY(4px);
+  opacity: 0.8;
+}
+
 
 /* ---------- KATALOG PRODUK ---------- */
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
