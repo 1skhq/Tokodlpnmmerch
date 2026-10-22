@@ -4,6 +4,7 @@ import {
 } from "./utils.js";
 import { getCart, cartTotal } from "./cart.js";
 import { STATUS } from "./config.js";
+import { rekeningList } from "./admin.js";
 
 /* ---------- komponen dasar ---------- */
 export const emptyState = (icon, title, text = "", action = "") =>
@@ -70,13 +71,18 @@ export function viewHome(S) {
     return emptyState(ic("alert", 44), "Produk gagal dimuat", "Periksa koneksi internet Anda.",
       `<button class="btn" data-act="reload">${ic("spark", 18)} Muat ulang</button>`);
   }
-  const cats = ["Semua", "Pre-Order", ...new Set(S.products.map(p => p.category).filter(Boolean))];
+  const kats = S.store.kategori?.length
+    ? S.store.kategori
+    : [...new Set(S.products.map(p => p.category).filter(Boolean))];
+  const cats = ["Semua", "Pre-Order", ...new Set([...kats, ...S.products.map(p => p.category).filter(Boolean)])];
   return `
     <section class="hero">
-      <div class="hero-text">
-        <h1>Selamat Datang di Dlpnm Shop</h1>
-        <p>Silakan berbelanja artikel apparel eksklusif kami. Pilih varian warna dan ukuran favoritmu, lalu amankan slot pesanan sebelum kuota rilis ditutup.</p>
+      <div>
+        <span class="eyebrow">${ic("spark", 14)} Koleksi terbaru</span>
+        <h1>${esc(S.store.storeName || "Toko Pakaian")}</h1>
+        <p class="muted">Pilih warna & ukuran, checkout, lalu lanjut ke WhatsApp.</p>
       </div>
+      <div class="hero-art">${shirt("#2748d6", 54)}${shirt("#f59e0b", 68)}${shirt("#10b981", 50)}</div>
     </section>
     <div class="searchbar">${ic("search", 18)}<input id="q" type="search" placeholder="Cari produk…" value="${esc(S.search)}" autocomplete="off"></div>
     <div class="chips">
@@ -191,22 +197,28 @@ export function viewCart(S) {
 }
 
 /* ---------- CHECKOUT ---------- */
-function payBox(pay, st) {
+function payBox(pay, st, idx = 0) {
   if (pay === "QRIS") {
     return st.qris
       ? `<div class="pay-detail"><img class="qris" src="${st.qris}" alt="QRIS">
            <a class="btn ghost block" href="${st.qris}" download="qris.jpg">${ic("copy", 16)} Unduh QRIS</a></div>`
       : `<div class="pay-detail muted">QRIS belum tersedia.</div>`;
   }
-  const b = st.bank || {};
-  return b.number
-    ? `<div class="pay-detail">
-         <div class="bank-name">${ic("bank", 18)} ${esc(b.name)}</div>
-         <div class="acc">${esc(b.number)}</div>
-         <div class="muted">a.n. ${esc(b.holder)}</div>
-         <button class="btn ghost block" data-act="copy" data-val="${esc(b.number)}">${ic("copy", 16)} Salin nomor rekening</button>
-       </div>`
-    : `<div class="pay-detail muted">Data rekening belum tersedia.</div>`;
+  const list = rekeningList(st);
+  if (!list.length) return `<div class="pay-detail muted">Data rekening belum tersedia.</div>`;
+  const r = list[Math.min(idx, list.length - 1)];
+  return `
+    <div class="pay-detail">
+      ${list.length > 1 ? `
+        <label class="small muted">Pilih rekening tujuan</label>
+        <select name="rekIdx" data-form>
+          ${list.map((x, n) => `<option value="${n}" ${n === idx ? "selected" : ""}>${esc(x.name)} · ${esc(x.number)}</option>`).join("")}
+        </select>` : ""}
+      <div class="bank-name">${ic("bank", 18)} ${esc(r.name)}</div>
+      <div class="acc">${esc(r.number)}</div>
+      <div class="muted">a.n. ${esc(r.holder)}</div>
+      <button class="btn ghost block" data-act="copy" data-val="${esc(r.number)}">${ic("copy", 16)} Salin nomor rekening</button>
+    </div>`;
 }
 
 export function viewCheckout(S) {
@@ -250,7 +262,7 @@ export function viewCheckout(S) {
           <input type="radio" name="pay" value="QRIS" data-form ${pay === "QRIS" ? "checked" : ""}>${ic("qr", 24)}<span>QRIS</span>
         </label>
       </div>
-      ${payBox(pay, S.store)}
+      ${payBox(pay, S.store, +(f.rekIdx || 0))}
       ${hasPO ? `<label class="ck"><input type="checkbox" name="poOk" data-form ${f.poOk ? "checked" : ""}> Saya mengerti ini produk Pre-Order dan barang dikirim sesuai estimasi</label>` : ""}
     </div>
 
