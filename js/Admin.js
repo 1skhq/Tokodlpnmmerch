@@ -1,5 +1,5 @@
 import { ic } from "./icons.js";
-import { esc, rp, normWA, productStock, isPOOpen } from "./utils.js";
+import { $, esc, rp, normWA, productStock, isPOOpen } from "./utils.js";
 import { STATUS, SIZE_PRESET, KATEGORI } from "./config.js";
 import { media, swatches } from "./buyer.js";
 
@@ -90,9 +90,9 @@ function prow(p) {
         <div class="swatches">${swatches(p.colors)}</div>
       </div>
       <div class="prow-act">
-        <button class="icon-btn" data-act="edit-product" data-id="${p.id}" aria-label="Edit">${ic("edit", 18)}</button>
-        ${p.isPO ? `<button class="icon-btn" data-act="toggle-po" data-id="${p.id}" aria-label="${p.poClosed ? "Buka PO" : "Tutup PO"}">${ic(p.poClosed ? "check" : "lock", 18)}</button>` : ""}
-        <button class="icon-btn danger" data-act="del-product" data-id="${p.id}" aria-label="Hapus">${ic("trash", 18)}</button>
+        <button class="icon-btn" data-act="edit-product" data-id="${esc(p.id)}" aria-label="Edit">${ic("edit", 18)}</button>
+        ${p.isPO ? `<button class="icon-btn" data-act="toggle-po" data-id="${esc(p.id)}" aria-label="${p.poClosed ? "Buka PO" : "Tutup PO"}">${ic(p.poClosed ? "check" : "lock", 18)}</button>` : ""}
+        <button class="icon-btn danger" data-act="del-product" data-id="${esc(p.id)}" aria-label="Hapus">${ic("trash", 18)}</button>
       </div>
     </div>`;
 }
@@ -170,6 +170,34 @@ function colorBlock(c, i) {
     </div>`;
 }
 
+/* Membaca nilai form dari DOM ke objek draft (dipakai sebelum render ulang) */
+export function readProductForm(d) {
+  const v = id => $("#" + id)?.value ?? "";
+  const num = id => Math.max(0, Math.round(Number(v(id)) || 0));
+  return {
+    ...d,
+    name: v("pf-name").trim(),
+    price: num("pf-price"),
+    category: v("pf-cat") || d.category,
+    description: v("pf-desc").trim(),
+    isPO: $("#pf-po") ? $("#pf-po").checked : !!d.isPO,
+    poEstimate: v("pf-estimasi").trim(),
+    poDeadline: v("pf-tutup"),
+    poQuota: num("pf-kuota"),
+    poSold: num("pf-terjual"),
+    poNote: v("pf-catatan").trim(),
+    colors: d.colors.map((c, i) => ({
+      ...c,
+      name: v(`c-name-${i}`).trim(),
+      hex: v(`c-hex-${i}`) || c.hex || "#111111",
+      sizes: c.sizes.map((z, j) => ({
+        size: v(`z-size-${i}-${j}`).trim(),
+        stock: num(`z-stock-${i}-${j}`),
+      })),
+    })),
+  };
+}
+
 /* ---------- PESANAN ---------- */
 export function orderListHTML(S) {
   const f = S.filter, q = f.q.trim().toLowerCase();
@@ -185,12 +213,88 @@ function orders(S) {
   const f = S.filter;
   const sel = S.orderSel ? S.orders.find(o => o.id === S.orderSel) : null;
   return `
-    ${sel ? orderDetail(sel, S) : ""}
-    <div class="searchbar">${ic("search", 18)}<input data-filter="q" placeholder="Cari kode atau nama" value="${esc(f.q)}" autocomplete="off"></div>
+    ${sel ? orderDetail(sel) : ""}
+    <div class="searchbar">${ic("search", 18)}<input data-filter="q" type="search" placeholder="Cari kode atau nama" value="${esc(f.q)}" autocomplete="off"></div>
     <div class="filters">
       <select data-filter="status">
         <option value="">Semua status</option>
         ${STATUS.map(s => `<option ${f.status === s ? "selected" : ""}>${s}</option>`).join("")}
       </select>
       <label class="chip ${f.po ? "on" : ""}" style="margin:0">
-        <input class="sr-only" type="checkbox" data-filter="po" ${f.po ? "checked" : ""}>${ic("calendar", 14)} H
+        <input class="sr-only" type="checkbox" data-filter="po" ${f.po ? "checked" : ""}>${ic("calendar", 14)} Hanya PO
+      </label>
+    </div>
+    <div id="olist">${orderListHTML(S)}</div>`;
+}
+
+function orderDetail(o) {
+  const alamat = [o.customer?.alamat, o.customer?.detail, o.customer?.kota].filter(Boolean).join(", ");
+  return `
+    <div class="panel detail">
+      <div class="row between">
+        <h3 style="margin:0">${esc(o.code)}</h3>
+        <button class="icon-btn" data-act="close-order" aria-label="Tutup">${ic("x", 18)}</button>
+      </div>
+      <div class="info">${ic("user", 16)} <span>${esc(o.customer?.name)}</span>
+        <a href="https://wa.me/${normWA(o.customer?.phone)}" target="_blank" rel="noopener">${ic("chat", 16)} Chat Pembeli</a>
+      </div>
+      <div class="info">${ic("pin", 16)} <span>${esc(alamat)}</span></div>
+      ${o.customer?.catatan ? `<div class="info">${ic("alert", 16)} <span>${esc(o.customer.catatan)}</span></div>` : ""}
+      <div class="info">${ic("wallet", 16)} <span>${esc(o.payment)} · <b>${rp(o.total)}</b></span></div>
+      ${o.hasPO ? `<div class="notice info">${ic("calendar", 18)} PO · estimasi ${esc(o.poEstimate)}</div>` : ""}
+      <div class="items">
+        ${(o.items || []).map(i => `
+          <div class="item-line">
+            ${i.isPO ? `<span class="badge po">PO</span>` : ""}
+            <span class="grow">${esc(i.name)} · ${esc(i.color)} · ${esc(i.size)}</span>
+            <b>× ${i.qty}</b>
+          </div>`).join("")}
+      </div>
+      <label>Status
+        <select id="ds">${STATUS.map(s => `<option ${s === o.status ? "selected" : ""}>${s}</option>`).join("")}</select>
+      </label>
+      <div class="two">
+        <label>Kurir<input id="dk" value="${esc(o.courier)}" placeholder="JNE, J&T, SiCepat…"></label>
+        <label>Nomor resi<input id="dr" value="${esc(o.trackingNumber)}"></label>
+      </div>
+      <button class="btn block" data-act="save-order" data-id="${esc(o.id)}">${ic("check", 18)} Simpan perubahan</button>
+    </div>`;
+}
+
+/* ---------- TOKO ---------- */
+function settings(S) {
+  const s = S.store || {}, b = s.bank || {};
+  const logo = S.imgTmp.logo ?? s.logo ?? "";
+  const qris = S.imgTmp.qris ?? s.qris ?? "";
+  return `
+    <div class="panel">
+      <h3>Identitas toko</h3>
+      <label>Nama toko<input id="s-name" value="${esc(s.storeName)}"></label>
+      <div class="upload-block">
+        <img id="prev-logo" class="logo-lg" src="${logo}" alt="" ${logo ? "" : "hidden"}>
+        <label class="upload">${ic("image", 18)}<span>${logo ? "Ganti logo" : "Unggah logo (opsional)"}</span>
+          <input class="sr-only" type="file" accept="image/*" data-img="logo">
+        </label>
+      </div>
+      <label>Nomor WhatsApp admin<input id="s-wa" type="tel" inputmode="tel" value="${esc(s.adminWa)}" placeholder="628123456789"></label>
+    </div>
+
+    <div class="panel">
+      <h3>Rekening bank</h3>
+      <label>Nama bank<input id="s-bank" value="${esc(b.name)}" placeholder="BCA / BRI / Mandiri"></label>
+      <label>Nomor rekening<input id="s-rek" inputmode="numeric" value="${esc(b.number)}"></label>
+      <label>Atas nama<input id="s-holder" value="${esc(b.holder)}"></label>
+    </div>
+
+    <div class="panel">
+      <h3>QRIS</h3>
+      <div class="upload-block">
+        <img id="prev-qris" class="qris" src="${qris}" alt="" ${qris ? "" : "hidden"}>
+        <label class="upload">${ic("qr", 18)}<span>${qris ? "Ganti gambar QRIS" : "Unggah gambar QRIS"}</span>
+          <input class="sr-only" type="file" accept="image/*" data-img="qris">
+        </label>
+      </div>
+    </div>
+
+    <button class="btn block big" data-act="save-settings">${ic("check", 18)} Simpan pengaturan</button>`;
+}
