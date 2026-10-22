@@ -5,12 +5,12 @@
 // 1) Salin firebaseConfig dari Firebase Console
 //    (Project settings > Your apps > Web app)
 export const firebaseConfig = {
-  apiKey: "ISI_API_KEY",
-  authDomain: "ISI_PROJECT.firebaseapp.com",
-  projectId: "ISI_PROJECT_ID",
-  storageBucket: "ISI_PROJECT.appspot.com",
-  messagingSenderId: "ISI_SENDER_ID",
-  appId: "ISI_APP_ID",
+  apiKey: "AIzaSyDbGa57d6yxVnILAh7OxUCG5g7Vk92HkcY",
+  authDomain: "dlpnm-merch.firebaseapp.com",
+  projectId: "dlpnm-merch",
+  storageBucket: "dlpnm-merch.firebasestorage.app",
+  messagingSenderId: "561977784210",
+  appId: "1:561977784210:web:429d322210287aed3c334b",
 };
 
 // 2) (Opsional) Endpoint JSON saran kota: menerima ?q=kata, mengembalikan array string.
