@@ -1,6 +1,6 @@
 import { ic } from "./icons.js";
 import { $, esc, rp, normWA, productStock, isPOOpen } from "./utils.js";
-import { STATUS, SIZE_PRESET, KATEGORI_AWAL } from "./config.js";
+import { STATUS, SIZE_PRESET, KATEGORI_AWAL, LIMITS } from "./config.js";
 import { media, swatches } from "./buyer.js";
 
 const TABS = [
@@ -10,16 +10,29 @@ const TABS = [
   ["settings", "Toko", "store"],
 ];
 
+const RANGE = [
+  ["", "100 terbaru"],
+  ["bulan", "Bulan ini"],
+  ["30", "30 hari terakhir"],
+  ["365", "1 tahun terakhir"],
+];
+
 const tsMs = ts => (ts?.toMillis ? ts.toMillis() : Date.now());
 
-/* ---------- daftar kategori (dari Firebase, atau bawaan) ---------- */
+/* ---------- daftar kategori ---------- */
 export function kategoriList(S) {
   const saved = Array.isArray(S.store.kategori) && S.store.kategori.length
     ? S.store.kategori
     : KATEGORI_AWAL;
-  // Kategori yang sudah dipakai produk tapi belum ada di daftar ikut ditampilkan
   const dipakai = S.products.map(p => p.category).filter(Boolean);
   return [...new Set([...saved, ...dipakai])];
+}
+
+/* ---------- rekening (format lama & baru) ---------- */
+export function rekeningList(s) {
+  if (Array.isArray(s.rekening)) return s.rekening;
+  if (s.bank?.number) return [{ ...s.bank }];
+  return [];
 }
 
 /* ---------- LOGIN ---------- */
@@ -59,6 +72,7 @@ function dashboard(S) {
     ["calendar", "PO aktif", o.filter(x => x.hasPO && x.status !== "Selesai").length, "purple"],
   ];
   return `
+    <p class="muted small">Dihitung dari pesanan yang termuat (maks ${LIMITS.orders}).</p>
     <div class="stat-grid">
       ${cards.map(([i, l, n, c]) => `<div class="stat ${c}"><div class="stat-ic">${ic(i, 20)}</div><b>${n}</b><span>${l}</span></div>`).join("")}
     </div>
@@ -93,10 +107,10 @@ function prow(p) {
   const status = p.isPO ? (isPOOpen(p) ? "PO buka" : "PO tutup") : `stok ${productStock(p)}`;
   return `
     <div class="prow">
-      <div class="thumb sm">${media(p.image, p.colors?.[0]?.hex, 40)}</div>
+      <div class="thumb sm">${media(p.images?.[0], p.colors?.[0]?.hex, 40)}</div>
       <div class="grow">
         <div class="row"><b>${esc(p.name)}</b>${p.isPO ? `<span class="badge po">PO</span>` : ""}</div>
-        <small class="muted">${rp(p.price)} · ${esc(p.category || "-")} · ${(p.colors || []).length} warna · ${status}</small>
+        <small class="muted">${rp(p.price)} · ${esc(p.category || "-")} · ${(p.colors || []).length} warna · ${(p.images || []).length} foto · ${status}</small>
         <div class="swatches">${swatches(p.colors)}</div>
       </div>
       <div class="prow-act">
@@ -104,6 +118,22 @@ function prow(p) {
         ${p.isPO ? `<button class="icon-btn" data-act="toggle-po" data-id="${esc(p.id)}" aria-label="${p.poClosed ? "Buka PO" : "Tutup PO"}">${ic(p.poClosed ? "check" : "lock", 18)}</button>` : ""}
         <button class="icon-btn danger" data-act="del-product" data-id="${esc(p.id)}" aria-label="Hapus">${ic("trash", 18)}</button>
       </div>
+    </div>`;
+}
+
+function galleryField(d) {
+  const imgs = d.images || [];
+  return `
+    <div class="section">Foto produk <small class="muted">(${imgs.length}/${LIMITS.gallery}, foto pertama jadi sampul)</small></div>
+    <div class="gal-edit">
+      ${imgs.map((s, i) => `
+        <div class="gthumb"><img src="${s}" alt="">
+          <button class="gdel" data-act="del-photo" data-i="${i}" aria-label="Hapus foto">${ic("x", 14)}</button>
+        </div>`).join("")}
+      ${imgs.length < LIMITS.gallery ? `
+        <label class="gadd">${ic("image", 22)}<span>Tambah</span>
+          <input class="sr-only" type="file" accept="image/*" multiple data-img="gallery">
+        </label>` : ""}
     </div>`;
 }
 
@@ -119,12 +149,7 @@ export function productForm(d, S) {
       </div>
       <label>Deskripsi<textarea id="pf-desc" rows="3">${esc(d.description)}</textarea></label>
 
-      <div class="upload-block">
-        ${d.image ? `<img class="preview" src="${d.image}" alt="">` : ""}
-        <label class="upload">${ic("image", 18)}<span>${d.image ? "Ganti foto utama" : "Foto utama (opsional)"}</span>
-          <input class="sr-only" type="file" accept="image/*" data-img="main">
-        </label>
-      </div>
+      ${galleryField(d)}
 
       <label class="ck"><input id="pf-po" type="checkbox" data-toggle="po" ${d.isPO ? "checked" : ""}> Produk Pre-Order (PO)</label>
       ${d.isPO ? poFields(d) : ""}
@@ -181,12 +206,13 @@ function colorBlock(c, i) {
     </div>`;
 }
 
-/* Membaca nilai form dari DOM ke objek draft */
+/* Membaca nilai form dari DOM ke objek draft (images ikut terbawa lewat spread) */
 export function readProductForm(d) {
   const v = id => $("#" + id)?.value ?? "";
   const num = id => Math.max(0, Math.round(Number(v(id)) || 0));
   return {
     ...d,
+    images: d.images || [],
     name: v("pf-name").trim(),
     price: num("pf-price"),
     category: v("pf-cat") || d.category,
@@ -224,9 +250,12 @@ function orders(S) {
   const f = S.filter;
   const sel = S.orderSel ? S.orders.find(o => o.id === S.orderSel) : null;
   return `
-    ${sel ? orderDetail(sel, S) : ""}
+    ${sel ? orderDetail(sel) : ""}
     <div class="searchbar">${ic("search", 18)}<input data-filter="q" type="search" placeholder="Cari kode atau nama" value="${esc(f.q)}" autocomplete="off"></div>
     <div class="filters">
+      <select data-filter="range">
+        ${RANGE.map(([v, l]) => `<option value="${v}" ${f.range === v ? "selected" : ""}>${l}</option>`).join("")}
+      </select>
       <select data-filter="status">
         <option value="">Semua status</option>
         ${STATUS.map(s => `<option ${f.status === s ? "selected" : ""}>${s}</option>`).join("")}
@@ -235,10 +264,10 @@ function orders(S) {
         <input class="sr-only" type="checkbox" data-filter="po" ${f.po ? "checked" : ""}>${ic("calendar", 14)} Hanya PO
       </label>
     </div>
+    <p class="muted small">Menampilkan maks ${LIMITS.orders} pesanan sesuai filter. Cari kode lama di kolom pencarian bila perlu.</p>
     <div id="olist">${orderListHTML(S)}</div>`;
 }
 
-/* Detail pesanan: data pelanggan bisa diedit admin */
 export function orderDetail(o) {
   const c = o.customer || {};
   const alamat = [c.alamat, c.detail, c.kota].filter(Boolean).join(", ");
@@ -289,6 +318,25 @@ export function orderDetail(o) {
 }
 
 /* ---------- TOKO ---------- */
+function bannerPanel(S) {
+  const list = S.banner || [];
+  return `
+    <div class="panel">
+      <h3>Banner beranda</h3>
+      <p class="muted small">Foto banner tampil sebagai slide di beranda, maksimal ${LIMITS.banner} foto. Foto langsung tersimpan saat ditambah atau dihapus.</p>
+      <div class="gal-edit">
+        ${list.map((s, i) => `
+          <div class="gthumb wide"><img src="${s}" alt="">
+            <button class="gdel" data-act="del-banner" data-i="${i}" aria-label="Hapus banner">${ic("x", 14)}</button>
+          </div>`).join("")}
+        ${list.length < LIMITS.banner ? `
+          <label class="gadd wide">${ic("image", 22)}<span>Tambah banner</span>
+            <input class="sr-only" type="file" accept="image/*" multiple data-img="banner">
+          </label>` : ""}
+      </div>
+    </div>`;
+}
+
 function settings(S) {
   const s = S.store || {};
   const rek = rekeningList(s);
@@ -296,6 +344,8 @@ function settings(S) {
   const logo = S.imgTmp.logo ?? s.logo ?? "";
   const qris = S.imgTmp.qris ?? s.qris ?? "";
   return `
+    ${bannerPanel(S)}
+
     <div class="panel">
       <h3>Identitas toko</h3>
       <label>Nama toko<input id="s-name" value="${esc(s.storeName)}"></label>
@@ -348,11 +398,4 @@ function settings(S) {
     </div>
 
     <button class="btn block big" data-act="save-settings">${ic("check", 18)} Simpan pengaturan</button>`;
-}
-
-/* Rekening: mendukung format lama (satu objek bank) dan format baru (array) */
-export function rekeningList(s) {
-  if (Array.isArray(s.rekening)) return s.rekening;
-  if (s.bank?.number) return [{ ...s.bank }];
-  return [];
 }
