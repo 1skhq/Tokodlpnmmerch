@@ -415,9 +415,10 @@ async function saveProduct() {
   if (colors.some(c => !c.name)) return toast("Setiap warna wajib diberi nama", "warn");
   if (!colors.some(c => c.sizes.length)) return toast("Tambahkan minimal satu ukuran beserta stoknya", "warn");
 
-  const data = {
+    const data = {
     name: d.name,
     price: d.price,
+    salePrice: d.salePrice > 0 && d.salePrice < d.price ? d.salePrice : 0,
     category: d.category,
     description: d.description,
     images: d.images.slice(0, LIMITS.gallery),
