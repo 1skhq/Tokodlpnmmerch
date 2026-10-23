@@ -6,6 +6,8 @@ import * as B from "./buyer.js";
 import * as A from "./admin.js";
 import { pasangAutocomplete } from "./address.js";
 import { ic } from "./icons.js";
+import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isPOOpen, sizeStock, hargaJual } from "./utils.js";
+
 
 const DEFAULT_FORM = { pay: "Transfer Bank", rekIdx: 0, nama: "", phone: "", kota: "", alamat: "", detail: "", catatan: "", poOk: false };
 
@@ -251,7 +253,7 @@ function buyNow() {
   const { p, color, size, qty, stock } = v;
   if (!p.isPO && qty > stock) return toast(`Stok tersisa ${stock}`, "warn");
   S.direct = {
-    key: [p.id, color, size].join("|"), id: p.id, name: p.name, price: p.price,
+    key: [p.id, color, size].join("|"), id: p.id, name: p.name,     id: p.id, name: p.name, price: hargaJual(p),
     color, size, qty, isPO: !!p.isPO, poEstimate: p.poEstimate || "",
   };
   S.pick.qty = 1;
@@ -314,7 +316,7 @@ async function submitOrder() {
       detail: (f.detail || "").trim(),
       catatan: (f.catatan || "").trim(),
     },
-    items: items.map(({ name, color, size, qty, price, isPO, poEstimate }) =>
+        items: items.map(({ name, color, size, qty, price, isPO, poEstimate }) =>
       ({ name, color, size, qty, price, isPO, poEstimate })),
     total: cartTotal(items),
     payment,
