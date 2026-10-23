@@ -102,3 +102,13 @@ export function checkDocSize(obj) {
   if (bytes > DOC.warnBytes) toast("Peringatan: data mendekati batas 1MB.", "warn");
   return true;
 }
+
+/* ---------- harga diskon ---------- */
+// Harga yang dibayar pembeli: harga diskon bila valid, jika tidak harga asli
+export const hargaJual = p =>
+  p.salePrice > 0 && p.salePrice < p.price ? p.salePrice : p.price;
+
+// Persentase diskon (0 jika tidak diskon)
+export const persenDiskon = p =>
+  hargaJual(p) < p.price ? Math.round((1 - hargaJual(p) / p.price) * 100) : 0;
+
