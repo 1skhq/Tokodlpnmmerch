@@ -189,6 +189,37 @@ function render() {
   nav.hidden = admin;
   nav.innerHTML = admin ? "" : bottomNav(r.name);
   $("#app").innerHTML = admin ? adminView() : buyerView(r);
+function render() {
+  const r = route();
+  const admin = r.name === "admin";
+  $("#topbar").innerHTML = topbar(admin);
+  const nav = $("#bottomnav");
+  nav.hidden = admin;
+  nav.innerHTML = admin ? "" : bottomNav(r.name);
+  $("#app").innerHTML = admin ? adminView() : buyerView(r);
+  renderFab(admin);
+
+  if (r.name === "checkout" && $("#kota")) {
+    pasangAutocomplete($("#kota"), $("#kota-list"), v => { S.form.kota = v; });
+  }
+}
+
+/* Tombol WhatsApp melayang: selalu tampil di halaman pembeli */
+function renderFab(admin) {
+  let fab = document.getElementById("wa-fab");
+  if (admin) { fab?.remove(); return; }
+  if (!fab) {
+    fab = document.createElement("a");
+    fab.id = "wa-fab";
+    fab.className = "wa-fab";
+    fab.target = "_blank";
+    fab.rel = "noopener";
+    fab.setAttribute("aria-label", "Chat WhatsApp");
+    document.body.appendChild(fab);
+  }
+  fab.href = `https://wa.me/${CONTACT.wa}`;
+  fab.innerHTML = ic("chat", 26);
+}
 
   if (r.name === "checkout" && $("#kota")) {
     pasangAutocomplete($("#kota"), $("#kota-list"), v => { S.form.kota = v; });
