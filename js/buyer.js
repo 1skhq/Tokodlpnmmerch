@@ -77,8 +77,9 @@ export function gridHTML(S) {
   );
   if (!list.length) return emptyState(ic("search", 40), "Produk tidak ditemukan", "Coba kata kunci atau kategori lain.");
   return list.map(pcard).join("");
-  
-  export function contactBlock() {
+}
+
+export function contactBlock() {
   return `
     <section class="contact panel">
       <h3>Hubungi kami</h3>
@@ -100,7 +101,6 @@ export function gridHTML(S) {
     </section>`;
 }
 
-}
 
 export function viewHome(S) {
   if (S.loading) return skeleton();
