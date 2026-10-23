@@ -41,9 +41,9 @@ export const SIZE_PRESET = ["S", "M", "L", "XL", "XXL"];
 // Kategori awal (dipakai jika belum ada kategori tersimpan di Firebase)
 export const KATEGORI_AWAL = ["Best Seller", "Lainnya"];
 export const CONTACT = {
-  wa: "62812xxxxxxx",          // tanpa + dan tanpa 0 di depan
-  waDisplay: "0812-xxxx-xxxx",
-  tiktok: "namaakun",          // tanpa @
-  instagram: "namaakun",       // tanpa @
+  wa: "62851-8224-7816",          // tanpa + dan tanpa 0 di depan
+  waDisplay: "0851-8224-7816",
+  tiktok: "dlpnmmerch",          // tanpa @
+  instagram: "dlpnmmerch",       // tanpa @
 };
 
