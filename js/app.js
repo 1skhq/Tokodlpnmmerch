@@ -1,4 +1,4 @@
-import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isPOOpen, sizeStock } from "./utils.js";
+import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isPOOpen, sizeStock, hargaJual } from "./utils.js";
 import { STATUS, KATEGORI_AWAL, LIMITS, CONTACT } from "./config.js";
 import * as api from "./data.js";
 import { getCart, addItem, setQty, removeItem, clearCart, cartCount, cartTotal } from "./cart.js";
@@ -6,7 +6,6 @@ import * as B from "./buyer.js";
 import * as A from "./admin.js";
 import { pasangAutocomplete } from "./address.js";
 import { ic } from "./icons.js";
-import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isPOOpen, sizeStock, hargaJual } from "./utils.js";
 
 
 const DEFAULT_FORM = { pay: "Transfer Bank", rekIdx: 0, nama: "", phone: "", kota: "", alamat: "", detail: "", catatan: "", poOk: false };
