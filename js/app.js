@@ -540,7 +540,7 @@ async function saveSettings() {
     logo: S.imgTmp.logo ?? S.store.logo ?? "",
     qris: S.imgTmp.qris ?? S.store.qris ?? "",
   };
-  if (!data.storeName) return toast("Isi nama toko", "warn");
+  if (!data.storeName) return toast("Dlpnm Merch", "warn");
   if (data.adminWa && normalizeLen(data.adminWa) < 10) return toast("Nomor WA tidak valid", "warn");
   if (!kategori.length) return toast("Minimal satu kategori", "warn");
   if (!checkDocSize(data)) return;
