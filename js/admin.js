@@ -110,7 +110,7 @@ function prow(p) {
       <div class="thumb sm">${media(p.images?.[0], p.colors?.[0]?.hex, 40)}</div>
       <div class="grow">
         <div class="row"><b>${esc(p.name)}</b>${p.isPO ? `<span class="badge po">PO</span>` : ""}</div>
-        <small class="muted">${rp(p.price)} · ${esc(p.category || "-")} · ${(p.colors || []).length} warna · ${(p.images || []).length} foto · ${status}</small>
+        <small class="muted">${p.salePrice && p.salePrice < p.price ? `<s>${rp(p.price)}</s> ${rp(p.salePrice)}` : rp(p.price)} · ${esc(p.category || "-")} · ${(p.colors || []).length} warna · ${(p.images || []).length} foto · ${status}</small>
         <div class="swatches">${swatches(p.colors)}</div>
       </div>
       <div class="prow-act">
@@ -144,7 +144,11 @@ export function productForm(d, S) {
       <h3>${d.id ? "Edit produk" : "Produk baru"}</h3>
       <label>Nama produk<input id="pf-name" value="${esc(d.name)}" placeholder="Contoh: Kaos Polos Basic"></label>
       <div class="two">
-        <label>Harga (Rp)<input id="pf-price" type="number" inputmode="numeric" min="0" value="${d.price || ""}"></label>
+        <div class="two">
+  <label>Harga asli (Rp)<input id="pf-price" type="number" inputmode="numeric" min="0" value="${d.price || ""}"></label>
+  <label>Harga diskon (Rp) <small>(opsional)</small><input id="pf-sale" type="number" inputmode="numeric" min="0" value="${d.salePrice || ""}" placeholder="kosong = tidak diskon"></label>
+</div>
+
         <label>Kategori<select id="pf-cat">${kats.map(k => `<option ${d.category === k ? "selected" : ""}>${esc(k)}</option>`).join("")}</select></label>
       </div>
       <label>Deskripsi<textarea id="pf-desc" rows="3">${esc(d.description)}</textarea></label>
@@ -215,6 +219,7 @@ export function readProductForm(d) {
     images: d.images || [],
     name: v("pf-name").trim(),
     price: num("pf-price"),
+    salePrice: num("pf-sale"),
     category: v("pf-cat") || d.category,
     description: v("pf-desc").trim(),
     isPO: $("#pf-po") ? $("#pf-po").checked : !!d.isPO,
