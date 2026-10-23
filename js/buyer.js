@@ -5,6 +5,22 @@ import {
 import { getCart, cartTotal } from "./cart.js";
 import { STATUS, CONTACT } from "./config.js";
 import { rekeningList } from "./admin.js";
+import {
+  esc, rp, normWA, productStock, sizeStock, isPOOpen, daysLeft, sisaKuota, hargaJual, persenDiskon,
+} from "./utils.js";
+
+
+/* Harga: harga asli dicoret bila ada diskon, plus badge persen */
+export function priceHTML(p, size = "") {
+  const jual = hargaJual(p);
+  const pct = persenDiskon(p);
+  if (!pct) return `<span class="price ${size}">${rp(p.price)}</span>`;
+  return `
+    <span class="price ${size}">${rp(jual)}</span>
+    <s class="old-price">${rp(p.price)}</s>
+    <span class="off">-${pct}%</span>`;
+}
+
 
 /* ---------- komponen dasar ---------- */
 export const emptyState = (icon, title, text = "", action = "") =>
@@ -59,10 +75,10 @@ function pcard(p) {
     : (stok > 0 ? `Stok ${stok}` : "Stok habis");
   return `
     <a class="pcard" href="#/produk/${esc(p.id)}">
-      <div class="thumb">${media(p.images?.[0], p.colors?.[0]?.hex)}${badge(p)}</div>
+      <div class="thumb">${media(p.images?.[0], p.colors?.[0]?.hex)}${badge(p)}${persenDiskon(p) ? `<span class="off thumb-off">-${persenDiskon(p)}%</span>` : ""}</div>
       <div class="pbody">
         <h3>${esc(p.name)}</h3>
-        <div class="price">${rp(p.price)}</div>
+        <div class="price-row">${priceHTML(p)}</div>
         <div class="swatches">${swatches(p.colors)}</div>
         <small class="muted">${info}</small>
       </div>
@@ -189,7 +205,7 @@ export function viewProduct(p, S) {
       </div>
       <div class="pinfo">
         <h1>${esc(p.name)}</h1>
-        <div class="price-big">${rp(p.price)}</div>
+        <div class="price-big">${priceHTML(p, "big")}</div>
         ${p.isPO ? poBox(p) : ""}
         <div class="label">Warna${color ? `: <span class="muted">${esc(color.name)}</span>` : ""}</div>
         <div class="colorchips">${colorHTML}</div>
