@@ -1,6 +1,8 @@
 // Keranjang disimpan di localStorage. Satu item = produk + warna + ukuran.
 const KEY = "tk_cart_v2";
 
+import { hargaJual } from "./utils.js";
+
 export function getCart() {
   try { return JSON.parse(localStorage.getItem(KEY)) || []; }
   catch { return []; }
@@ -20,7 +22,8 @@ export function addItem({ product, color, size, qty, stock }) {
     item.qty = next;
   } else {
     list.push({
-      key, id: product.id, name: product.name, price: product.price,
+      key, id: product.id, name: product.name, price: hargaJual(product),
+
       color, size, qty: Math.min(max, qty),
       isPO: !!product.isPO, poEstimate: product.poEstimate || "",
     });
