@@ -1,5 +1,5 @@
 import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isPOOpen, sizeStock } from "./utils.js";
-import { STATUS, KATEGORI_AWAL, LIMITS } from "./config.js";
+import { STATUS, KATEGORI_AWAL, LIMITS, CONTACT } from "./config.js";
 import * as api from "./data.js";
 import { getCart, addItem, setQty, removeItem, clearCart, cartCount, cartTotal } from "./cart.js";
 import * as B from "./buyer.js";
@@ -189,14 +189,6 @@ function render() {
   nav.hidden = admin;
   nav.innerHTML = admin ? "" : bottomNav(r.name);
   $("#app").innerHTML = admin ? adminView() : buyerView(r);
-function render() {
-  const r = route();
-  const admin = r.name === "admin";
-  $("#topbar").innerHTML = topbar(admin);
-  const nav = $("#bottomnav");
-  nav.hidden = admin;
-  nav.innerHTML = admin ? "" : bottomNav(r.name);
-  $("#app").innerHTML = admin ? adminView() : buyerView(r);
   renderFab(admin);
 
   if (r.name === "checkout" && $("#kota")) {
@@ -219,11 +211,6 @@ function renderFab(admin) {
   }
   fab.href = `https://wa.me/${CONTACT.wa}`;
   fab.innerHTML = ic("chat", 26);
-}
-
-  if (r.name === "checkout" && $("#kota")) {
-    pasangAutocomplete($("#kota"), $("#kota-list"), v => { S.form.kota = v; });
-  }
 }
 
 function refreshOrders() {
