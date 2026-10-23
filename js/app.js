@@ -1,4 +1,3 @@
-import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isPOOpen, sizeStock, hargaJual } from "./utils.js";
 import { STATUS, KATEGORI_AWAL, LIMITS, CONTACT } from "./config.js";
 import * as api from "./data.js";
 import { getCart, addItem, setQty, removeItem, clearCart, cartCount, cartTotal } from "./cart.js";
@@ -6,6 +5,7 @@ import * as B from "./buyer.js";
 import * as A from "./admin.js";
 import { pasangAutocomplete } from "./address.js";
 import { ic } from "./icons.js";
+import { $, esc, toast, copyText, compressImage, checkDocSize, genCode, isPOOpen, sizeStock, hargaJual } from "./utils.js";
 
 
 const DEFAULT_FORM = { pay: "Transfer Bank", rekIdx: 0, nama: "", phone: "", kota: "", alamat: "", detail: "", catatan: "", poOk: false };
@@ -252,7 +252,7 @@ function buyNow() {
   const { p, color, size, qty, stock } = v;
   if (!p.isPO && qty > stock) return toast(`Stok tersisa ${stock}`, "warn");
   S.direct = {
-    key: [p.id, color, size].join("|"), id: p.id, name: p.name,     id: p.id, name: p.name, price: hargaJual(p),
+    key: [p.id, color, size].join("|"), id: p.id, name: p.name, price: hargaJual(p),
     color, size, qty, isPO: !!p.isPO, poEstimate: p.poEstimate || "",
   };
   S.pick.qty = 1;
@@ -415,7 +415,7 @@ async function saveProduct() {
   if (colors.some(c => !c.name)) return toast("Setiap warna wajib diberi nama", "warn");
   if (!colors.some(c => c.sizes.length)) return toast("Tambahkan minimal satu ukuran beserta stoknya", "warn");
 
-    const data = {
+  const data = {
     name: d.name,
     price: d.price,
     salePrice: d.salePrice > 0 && d.salePrice < d.price ? d.salePrice : 0,
