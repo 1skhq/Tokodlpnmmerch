@@ -1,7 +1,4 @@
 import { ic, shirt } from "./icons.js";
-import {
-  esc, rp, normWA, productStock, sizeStock, isPOOpen, daysLeft, sisaKuota,
-} from "./utils.js";
 import { getCart, cartTotal } from "./cart.js";
 import { STATUS, CONTACT } from "./config.js";
 import { rekeningList } from "./admin.js";
