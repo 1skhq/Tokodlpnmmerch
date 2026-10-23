@@ -143,7 +143,7 @@ function topbar(admin) {
   const logo = S.store.logo
     ? `<img class="logo" src="${S.store.logo}" alt="">`
     : `<span class="logo-ph">${ic("store", 18)}</span>`;
-  const brand = `<a class="brand" href="#/">${logo}<span>${esc(S.store.storeName || "Toko Pakaian")}</span></a>`;
+  const brand = `<a class="brand" href="#/">${logo}<span>${esc(S.store.storeName || "Dlpnm Merch")}</span></a>`;
   if (admin) return brand + `<span class="small muted">Admin</span>`;
   const n = cartCount();
   return brand + `
